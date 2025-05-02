@@ -2,6 +2,7 @@ package ru.netology.statsview.ui
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PointF
 import android.graphics.RectF
@@ -85,16 +86,36 @@ class StatsView @JvmOverloads constructor(
             return
         }
 
-        var startAngle = -90F
-        data.forEachIndexed { index, datum ->
-            val angle = datum * 360 / data.sum()
-            paint.color = colors.getOrElse(index) { generateRandomColor() }
-            canvas.drawArc(oval, startAngle, angle, false, paint)
-            startAngle += angle
+        val total = data.sum()
+        val maxValue = 100f
+        val filledRatio = total / maxValue
+        val normalizedRatio = min(1f, filledRatio)
+        val startAngle = -90f
+
+        paint.color = Color.LTGRAY
+        canvas.drawArc(oval, startAngle, 360f, false, paint)
+
+        if (normalizedRatio > 0) {
+            var currentStartAngle = startAngle
+            data.forEachIndexed { index, value ->
+                val angle = (value / total) * 360f * normalizedRatio
+                paint.color = colors.getOrElse(index) { generateRandomColor() }
+                canvas.drawArc(oval, currentStartAngle, angle, false, paint)
+                currentStartAngle += angle
+            }
         }
 
+        if (data.isNotEmpty()) {
+            paint.color = colors.first()
+            val dotRadius = lineWidth / 1000F
+            val dotX = center.x
+            val dotY = center.y - radius
+            canvas.drawCircle(dotX, dotY, dotRadius, paint)
+        }
+
+        val percentText = "%.2f%%".format(normalizedRatio * 100)
         canvas.drawText(
-            "%.2f%%".format((data.sum() * 100 / data.sum())),
+            percentText,
             center.x,
             center.y + textPaint.textSize / 4,
             textPaint
