@@ -8,10 +8,13 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        findViewById<StatsView>(R.id.statsView).data = listOf(
+
+        val view = findViewById<StatsView>(R.id.statsView)
+        view.data = listOf(
             25F,
             25F,
             25F,
+            25F
         )
     }
 }

@@ -1,5 +1,6 @@
 package ru.netology.statsview.ui
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -8,6 +9,7 @@ import android.graphics.PointF
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.View
+import android.view.animation.LinearInterpolator
 import androidx.core.content.withStyledAttributes
 import ru.netology.statsview.R
 import ru.netology.statsview.utils.AndroidUtils
@@ -29,6 +31,8 @@ class StatsView @JvmOverloads constructor(
     private var textSize = AndroidUtils.dp(context, 20).toFloat()
     private var lineWidth = AndroidUtils.dp(context, 5)
     private var colors = emptyList<Int>()
+    private var progress = 0F
+    private var valueAnimator: ValueAnimator? = null
 
     init {
         context.withStyledAttributes(attrs, R.styleable.StatsView) {
@@ -47,7 +51,7 @@ class StatsView @JvmOverloads constructor(
     var data: List<Float> = emptyList()
         set(value) {
             field = value
-            invalidate()
+            update()
         }
 
     private var radius = 0F
@@ -92,15 +96,20 @@ class StatsView @JvmOverloads constructor(
         val normalizedRatio = min(1f, filledRatio)
         val startAngle = -90f
 
-        paint.color = Color.LTGRAY
-        canvas.drawArc(oval, startAngle, 360f, false, paint)
+        canvas.save()
+        canvas.rotate(360 * progress, center.x, center.y)
 
+        if (progress >= 1F) {
+            paint.color = Color.LTGRAY
+            canvas.drawArc(oval, startAngle, 360F, false, paint)
+
+        }
         if (normalizedRatio > 0) {
             var currentStartAngle = startAngle
             data.forEachIndexed { index, value ->
                 val angle = (value / total) * 360f * normalizedRatio
                 paint.color = colors.getOrElse(index) { generateRandomColor() }
-                canvas.drawArc(oval, currentStartAngle, angle, false, paint)
+                canvas.drawArc(oval, currentStartAngle, angle * progress, false, paint)
                 currentStartAngle += angle
             }
         }
@@ -113,6 +122,8 @@ class StatsView @JvmOverloads constructor(
             canvas.drawCircle(dotX, dotY, dotRadius, paint)
         }
 
+        canvas.restore()
+
         val percentText = "%.2f%%".format(normalizedRatio * 100)
         canvas.drawText(
             percentText,
@@ -120,6 +131,25 @@ class StatsView @JvmOverloads constructor(
             center.y + textPaint.textSize / 4,
             textPaint
         )
+    }
+
+    private fun update() {
+        valueAnimator?.let {
+            it.removeAllListeners()
+            it.cancel()
+        }
+        progress = 0F
+
+        valueAnimator = ValueAnimator.ofFloat(0F, 1F).apply {
+            addUpdateListener { anim ->
+                progress = anim.animatedValue as Float
+                invalidate()
+            }
+            duration = 1500
+            interpolator = LinearInterpolator()
+        }.also {
+            it.start()
+        }
     }
 
     private fun generateRandomColor(): Int =
